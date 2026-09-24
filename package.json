@@ -1,7 +1,7 @@
 {
-  "name": "alcyon-game-template",
+  "name": "match3-rpg",
   "private": true,
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"

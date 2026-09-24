@@ -11,7 +11,7 @@ export const GAME_CONFIG = {
    * GitHub Pages では同じドメインの全ゲームが localStorage を共有するため、
    * 雛形から作ったゲームでは必ずこの値を変えること(この1か所だけ変えればよい)
    */
-  gameId: 'alcyon-template',
+  gameId: 'match3-rpg',
   /** 向きごとの論理解像度(仮仕様: 縦 720×1280、横 1280×720) */
   logicalSizes: {
     portrait: { width: 720, height: 1280 },
