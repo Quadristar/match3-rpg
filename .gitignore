@@ -1,0 +1,25 @@
+# 依存パッケージ
+node_modules/
+
+# ビルド成果物
+dist/
+*.tsbuildinfo
+
+# テスト・カバレッジ
+coverage/
+
+# ログ
+*.log
+npm-debug.log*
+
+# 環境変数(秘密情報を含む可能性がある)
+.env
+.env.*
+!.env.example
+
+# エディタ・OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/

@@ -1,0 +1,65 @@
+/**
+ * 表示中のシーン1つ分: 生成・レイヤーへの追加と、exit・破棄・入力の解除をまとめる。
+ * シーンの root の中の UI(Button・Panel)への入力は、UIInputRouter が自動で振り分ける。
+ */
+import type { Container } from 'pixi.js';
+import type { Scene, SceneContext, SceneFactory } from '../presentation/scenes/Scene';
+import { UIInputRouter } from '../presentation/ui/UIInputRouter';
+import type { AssetManifest, BundleName } from '../services/assets/assetTypes';
+import type { Layout } from '../services/layout/layoutTypes';
+import { type InputController, SceneInputScope } from './SceneInputScope';
+
+export interface MountTarget {
+  /** シーンの root を追加する先 */
+  readonly sceneLayer: Container;
+  /** シーンの background を追加する先 */
+  readonly backgroundLayer: Container;
+  readonly input: InputController;
+}
+
+export class MountedScene<K extends string, L extends Layout, M extends AssetManifest> {
+  /** 最後に resize() に渡したレイアウト(同じレイアウトで二重に呼ばないため) */
+  layout: L | null = null;
+
+  private constructor(
+    readonly key: K,
+    readonly scene: Scene<L, M>,
+    private readonly inputScope: SceneInputScope,
+  ) {}
+
+  /** このシーンで使うバンドル */
+  get bundles(): readonly BundleName<M>[] {
+    return this.scene.bundles ?? [];
+  }
+
+  /** シーンを生成し、レイヤーに追加する */
+  static mount<K extends string, L extends Layout, M extends AssetManifest, D>(
+    key: K,
+    factory: SceneFactory<K, L, M, D>,
+    context: Omit<SceneContext<K, M, D>, 'input'>,
+    target: MountTarget,
+  ): MountedScene<K, L, M> {
+    const inputScope = new SceneInputScope(target.input);
+    const scene = factory({ ...context, input: inputScope });
+    // UI への入力を、ゲーム側(context.input.on)より先に振り分ける
+    inputScope.addPointerHandler(new UIInputRouter(scene.root));
+    target.sceneLayer.addChild(scene.root);
+    if (scene.background !== undefined) {
+      target.backgroundLayer.addChild(scene.background);
+    }
+    return new MountedScene(key, scene, inputScope);
+  }
+
+  /** exit を呼び、入力の登録を解除し、表示物を子要素ごと破棄する(exit が失敗しても必ず行う) */
+  dispose(onError: (error: unknown) => void): void {
+    try {
+      this.scene.exit();
+    } catch (error) {
+      onError(error);
+    } finally {
+      this.inputScope.dispose();
+      this.scene.root.destroy({ children: true });
+      this.scene.background?.destroy({ children: true });
+    }
+  }
+}
