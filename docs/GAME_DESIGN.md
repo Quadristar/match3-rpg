@@ -42,7 +42,13 @@ src/
 ├─ app/
 │   └─ BattleDirector.ts     パズルとバトルの橋渡し(両者が接する唯一の場所)
 └─ presentation/
-    ├─ scenes/               TitleScene, BattleScene, ResultScene
+    ├─ game/                 Game.start に渡す設定一式(雛形の手順で作成済み)
+    │                        sceneKeys, gameLayout(レイアウト定義), gameAssets(マニフェスト),
+    │                        gameSave(セーブデータの形式), index
+    ├─ scenes/               シーンごとにフォルダを分ける
+    │   ├─ title/            TitleScene(仮のタイトル画面として作成済み)
+    │   ├─ battle/           BattleScene
+    │   └─ result/           ResultScene
     └─ views/                BoardView, TileView, UnitPortrait, HpBar, DamageNumbers
 ```
 
@@ -190,7 +196,8 @@ Phase 1〜2 は雛形リポジトリで実施済み。
 | 戦闘の時間モデル | ターン制を推奨(仮)。時間制限は後から追加可能 |
 | パーティ人数 | 未決定 |
 | 世界観・キャラクター・ストーリー | 未決定 |
-| ゲームタイトル・リポジトリ名 | 未決定(仮称で開始) |
+| ゲームタイトル | 未決定(仮称で開始) |
+| リポジトリ名・ゲーム ID | **決定: `match3-rpg`**(ゲーム ID はセーブデータの保存キーの前置きに使うため、変えると保存済みのデータが読めなくなる) |
 | 公開先 | GitHub Pages(当面)。itch.io 等は未定 |
 | 画面の向き | **決定: 縦横両対応、縦を優先して作り込む** |
 | 開発形態 | **決定: 完全新規の Web 版として開発** |
