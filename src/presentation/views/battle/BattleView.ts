@@ -130,17 +130,29 @@ export class BattleView extends Container {
 
   /** 再生を止める(描き直さない。シーンの終了時用) */
   stop(): void {
+    this.halt();
+    // 揺れの対象(シーンの root)は、シーンの終了時には先に破棄されていることがある
+    const target = this.options.shakeTarget;
+    if (!target.destroyed) {
+      target.position.set(0, 0);
+    }
+    this.enemyPanel.body.alpha = 1;
+  }
+
+  /**
+   * 破棄する。揺れの対象には触らない(シーンの root の破棄の途中で呼ばれ、root の位置はもう使えないため)
+   */
+  override destroy(options?: DestroyOptions): void {
+    this.halt();
+    super.destroy(options);
+  }
+
+  /** タイムラインとダメージの数字だけを止める */
+  private halt(): void {
     this.timeline?.kill();
     this.timeline = null;
     this.playing = null;
     this.clearDamageTexts();
-    this.options.shakeTarget.position.set(0, 0);
-    this.enemyPanel.body.alpha = 1;
-  }
-
-  override destroy(options?: DestroyOptions): void {
-    this.stop();
-    super.destroy(options);
   }
 
   private complete(): void {
