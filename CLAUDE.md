@@ -12,8 +12,9 @@
 
 - ブラウザで動作する 2D の「3マッチパズル＋RPG」ゲーム(完全新規開発)
 - 雛形リポジトリ `alcyon-game-template`(v1.0.0)から作成した
-- 技術: TypeScript / Vite / PixiJS / Vitest / ESLint
-  - GSAP・Howler.js は演出の段階で導入を検討する。導入するときは §3-7 に従い、報告してから追加する
+- 技術: TypeScript / Vite / PixiJS / GSAP / Vitest / ESLint
+  - GSAP は `presentation/` でのみ使う(`docs/decisions/002-adopt-gsap.md`)
+  - Howler.js は演出の段階で導入を検討する。導入するときは §3-7 に従い、報告してから追加する
 - 対象: PC・スマートフォン・タブレット(縦画面・横画面の両対応、縦を優先)
 - 前提とする表現: 高品質な静止画(立ち絵・背景)を、プログラム側の演出で魅力的に見せる 2D ゲーム
 - 世界観・キャラクター・ストーリー・パズルの細部ルールは**未確定**
@@ -167,7 +168,8 @@ npm run check      # typecheck + lint + test + build をまとめて実行
 
 ## 10. 現在のフェーズ
 
-- 現在: **Phase 3a(パズルロジック＋テスト)**
+- 現在: **Phase 3b(パズル表示: BoardView・操作・連鎖の再生)**
+  - Phase 3a(パズルロジック＋テスト)は完了
   - Phase 1〜2 は雛形リポジトリで完了済み(雛形 v1.0.0)
   - 開発準備: デモの削除、最小の形と仮のタイトル画面、ドキュメントの整備(完了)
 - フェーズの一覧と内容は `docs/GAME_DESIGN.md` の「開発フェーズ」を参照
