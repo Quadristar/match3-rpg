@@ -41,21 +41,23 @@ src/
 │   │                        BoardGenerator, Reshuffle, resolveMove(Phase 3a で作成)
 │   ├─ battle/               BattleState, TurnFlow, AttackResolver,
 │   │                        DamageCalculator, EnemyAI(Phase 4a で作成)
+│   ├─ session/              BattleSession: パズルとバトルの橋渡し(両者を import できる唯一の場所。Phase 4b)
 │   └─ progression/          経験値・レベル計算
-├─ app/
-│   └─ BattleDirector.ts     パズルとバトルの橋渡し(両者が接する唯一の場所)
 └─ presentation/
     ├─ game/                 Game.start に渡す設定一式(雛形の手順で作成済み)
     │                        sceneKeys, gameLayout(レイアウト定義), gameAssets(マニフェスト),
     │                        gameSave(セーブデータの形式), urlOptions(?seed), index
     ├─ scenes/               シーンごとにフォルダを分ける
     │   ├─ title/            TitleScene(仮のタイトル画面。タップでバトルへ)
-    │   ├─ battle/           BattleScene(Phase 3b 時点では盤面だけ)
+    │   ├─ battle/           BattleScene(盤面・敵・HP・勝敗の最小限の表示。Phase 4b)
     │   └─ result/           ResultScene
     └─ views/
+        ├─ playbackConfig.ts 再生全体の速さ(盤面とバトルで共通)
         ├─ board/            BoardView, TileView, BoardGeometry, BoardInputController,
         │                    playbackPlan, boardViewConfig(Phase 3b で作成)
-        └─ (将来)            UnitPortrait, HpBar, DamageNumbers
+        ├─ battle/           BattleView, EnemyPanel, PartyPanel, HpBar, ResultOverlay,
+        │                    battlePlaybackPlan, battleViewConfig(Phase 4b で作成)
+        └─ (将来)            UnitPortrait
 ```
 
 各ディレクトリは、実際に必要になったフェーズで作成する。
@@ -153,7 +155,21 @@ MoveResult ─▶ AttackResolver ─▶ Action[] ─▶ BattleState.apply() ─�
 - 敵は「次の攻撃までの残りターン数」を持ち、毎ターン 1 減らして 0 で攻撃し、間隔の値に戻す
 - 味方の攻撃で敵の HP が 0 になったら、敵は行動せずに勝利。敵の攻撃で味方が全員 HP 0 になったら敗北
 - `BattleEvent` の種類: `turnStart` / `partyAttack`(段ごとの内訳・HP の前後) / `enemyAttack`(HP の前後) / `enemyCountdown` / `victory`(経験値) / `defeat`
-- **BattleDirector**(`app/`): PuzzleSystem の結果を BattleSystem に渡し、`BattleEvent[]` を演出キューとして presentation に流す
+- **BattleSession**(`systems/session/`): 盤面・バトルの状態・乱数を持ち、入れ替えを受け取って `resolveMove` → `playTurn` を行い、`MoveResult` と `BattleEvent[]` をまとめて返す(`docs/decisions/003-battle-session-in-systems.md`)
+  - `systems/puzzle` と `systems/battle` は互いに import しない(ESLint で強制)。バトルは `MoveResult` ではなく、バトル側で定めた「消えたパネル」(`ClearedTiles`)を受け取る
+  - 再生の順番(盤面の連鎖 → バトルの出来事)は描画側(BattleScene)が決める
+
+### 表示(Phase 4b。最小限の仮の表示で、作り込みは Phase 6)
+
+- `BattleEvent[]` を、Pixi・GSAP に依存しない「再生の手順」(`battlePlaybackPlan`)に変換し、`BattleView` が GSAP で再生する
+  - 味方の攻撃: 敵が光り、ダメージの数字がふわっと出て消え、敵の HP バーが減る
+  - 敵の攻撃: 画面が少し揺れ、味方にダメージの数字が出て、味方の HP バーが減る
+  - 次の攻撃までの残りターン数を敵の上に表示する
+  - 勝敗が決まったら、少し間を置いて「勝利!」「敗北…」と「もう一度」「タイトルへ」ボタンを表示する(リザルト画面は Phase 5)
+- 盤面の再生からバトルの出来事の再生が終わるまで、入力を受け付けない
+- 表示の時間は `battleViewConfig.ts` の設定値。全体の速さは盤面と共通の `PLAYBACK_CONFIG.speed`
+- 画面が回転したら、盤面 → バトルの順に再生を即座に終え、最新の状態から描き直す
+- 敵は敵の領域(`enemy`)、味方の HP バーは立ち絵の領域(`portrait`)の下に置く(仮仕様)
 
 将来の候補: パーティ、属性、スキル、必殺技、状態異常、バフ・デバフ、装備、アイテム
 

@@ -3,7 +3,7 @@ import { BATTLE_RULES } from '../../../src/data/battleRules';
 import { type BattleData, createBattleState } from '../../../src/systems/battle/BattleState';
 import { playTurn } from '../../../src/systems/battle/TurnFlow';
 import type { BattleState } from '../../../src/systems/battle/types';
-import { fakeMove, INVALID_MOVE, SMALL_MOVE } from './fakeMove';
+import { cleared, NOTHING_CLEARED, SMALL_CLEAR } from './cleared';
 
 /** テスト用のデータ(敵と味方の数値だけ変えられる) */
 function testData(enemy: { maxHp?: number; attack?: number; attackInterval?: number }, hero: { maxHp?: number } = {}): BattleData {
@@ -28,7 +28,7 @@ function testData(enemy: { maxHp?: number; attack?: number; attackInterval?: num
 /** 小さい入れ替えを n 回行う */
 function playSmall(state: BattleState, n: number): BattleState {
   let s = state;
-  for (let i = 0; i < n; i++) s = playTurn(s, SMALL_MOVE).state;
+  for (let i = 0; i < n; i++) s = playTurn(s, SMALL_CLEAR).state;
   return s;
 }
 
@@ -37,8 +37,8 @@ describe('createBattleState', () => {
     const state = createBattleState('prototype');
     expect(state.turn).toBe(0);
     expect(state.outcome).toBe('ongoing');
-    expect(state.party).toEqual([{ id: 'hero', hp: 100, maxHp: 100, attack: 10, defense: 0 }]);
-    expect(state.enemy).toMatchObject({ id: 'prototype-enemy', hp: 300, maxHp: 300, attack: 20, turnsUntilAttack: 3 });
+    expect(state.party).toEqual([{ id: 'hero', name: '主人公(仮)', hp: 100, maxHp: 100, attack: 10, defense: 0 }]);
+    expect(state.enemy).toMatchObject({ id: 'prototype-enemy', name: '敵(仮)', hp: 300, maxHp: 300, attack: 20, turnsUntilAttack: 3 });
   });
 
   it('存在しないステージ・参照先はエラー', () => {
@@ -51,29 +51,22 @@ describe('createBattleState', () => {
 
 describe('playTurn: ターンの消費', () => {
   it('有効な入れ替え1回で1ターン進む', () => {
-    const result = playTurn(createBattleState('prototype'), SMALL_MOVE);
+    const result = playTurn(createBattleState('prototype'), SMALL_CLEAR);
     expect(result.consumedTurn).toBe(true);
     expect(result.state.turn).toBe(1);
   });
 
-  it('揃わない入れ替えではターンを消費せず、状態も出来事も変わらない', () => {
+  it('何も消えなかった(揃わない入れ替え)ならターンを消費せず、状態も出来事も変わらない', () => {
     const state = createBattleState('prototype');
-    const result = playTurn(state, INVALID_MOVE);
+    const result = playTurn(state, NOTHING_CLEARED);
     expect(result.consumedTurn).toBe(false);
     expect(result.state).toBe(state);
     expect(result.events).toEqual([]);
     expect(result.phases).toEqual([]);
   });
 
-  it('再配置があっても1ターンだけ消費する', () => {
-    const withReshuffle = { ...SMALL_MOVE, reshuffled: SMALL_MOVE.finalBoard } as const;
-    const result = playTurn(createBattleState('prototype'), withReshuffle);
-    expect(result.state.turn).toBe(1);
-    expect(result.events.filter((e) => e.type === 'turnStart')).toHaveLength(1);
-  });
-
   it('段階は 入力待ち → パズル解決 → 味方行動 → 勝敗判定 → 敵行動 → 勝敗判定 → 入力待ち', () => {
-    expect(playTurn(createBattleState('prototype'), SMALL_MOVE).phases).toEqual([
+    expect(playTurn(createBattleState('prototype'), SMALL_CLEAR).phases).toEqual([
       'awaitingInput',
       'resolvingPuzzle',
       'partyAction',
@@ -87,7 +80,7 @@ describe('playTurn: ターンの消費', () => {
 
 describe('playTurn: 味方の攻撃', () => {
   it('段ごとの内訳と最終ダメージ、HP の前後を出来事に入れる', () => {
-    const move = fakeMove([[{ kind: 0, count: 3 }], [{ kind: 1, count: 4 }], [{ kind: 2, count: 3 }]]);
+    const move = cleared([[{ kind: 0, count: 3 }], [{ kind: 1, count: 4 }], [{ kind: 2, count: 3 }]]);
     const result = playTurn(createBattleState('prototype'), move);
     const attack = result.events.find((e) => e.type === 'partyAttack');
     expect(attack).toEqual({
@@ -115,7 +108,7 @@ describe('playTurn: 敵の攻撃の間隔', () => {
     const attackTurns: number[] = [];
     const heroHp: number[] = [];
     for (let i = 0; i < 6; i++) {
-      const result = playTurn(state, SMALL_MOVE);
+      const result = playTurn(state, SMALL_CLEAR);
       state = result.state;
       for (const e of result.events) {
         if (e.type === 'enemyCountdown') countdowns.push(e.turnsUntilAttack);
@@ -130,7 +123,7 @@ describe('playTurn: 敵の攻撃の間隔', () => {
   });
 
   it('攻撃の出来事は、味方の HP の前後とダメージ(攻撃力 − 防御)を持つ', () => {
-    const result = playTurn(playSmall(createBattleState('prototype'), 2), SMALL_MOVE);
+    const result = playTurn(playSmall(createBattleState('prototype'), 2), SMALL_CLEAR);
     expect(result.events.map((e) => e.type)).toEqual(['turnStart', 'partyAttack', 'enemyAttack', 'enemyCountdown']);
     expect(result.events[2]).toEqual({
       type: 'enemyAttack',
@@ -144,7 +137,7 @@ describe('playTurn: 敵の攻撃の間隔', () => {
 
   it('毎ターン攻撃する敵(間隔 1)', () => {
     const state = createBattleState('s', testData({ attackInterval: 1 }));
-    const result = playTurn(state, SMALL_MOVE);
+    const result = playTurn(state, SMALL_CLEAR);
     expect(result.events.some((e) => e.type === 'enemyAttack')).toBe(true);
     expect(result.state.enemy.turnsUntilAttack).toBe(1);
   });
@@ -154,7 +147,7 @@ describe('playTurn: 勝敗', () => {
   it('敵の HP が 0 になったら、敵が行動する前に勝利する(経験値を出来事に入れる)', () => {
     // 敵は毎ターン攻撃するが、倒されたので行動しない
     const state = createBattleState('s', testData({ maxHp: 30, attackInterval: 1 }));
-    const result = playTurn(state, SMALL_MOVE);
+    const result = playTurn(state, SMALL_CLEAR);
     expect(result.state.outcome).toBe('victory');
     expect(result.state.enemy.hp).toBe(0);
     expect(result.phases).toEqual(['awaitingInput', 'resolvingPuzzle', 'partyAction', 'checkAfterParty', 'victory']);
@@ -166,20 +159,20 @@ describe('playTurn: 勝敗', () => {
   it('攻撃ターンに敵を倒した場合も、敵は攻撃しない', () => {
     // 3ターン目(敵の攻撃ターン)でちょうど倒れる HP
     const state = playSmall(createBattleState('s', testData({ maxHp: 90 })), 2);
-    const result = playTurn(state, SMALL_MOVE);
+    const result = playTurn(state, SMALL_CLEAR);
     expect(result.state.outcome).toBe('victory');
     expect(result.events.some((e) => e.type === 'enemyAttack')).toBe(false);
   });
 
   it('HP を超えるダメージでも HP は 0 で止まる', () => {
     const state = createBattleState('s', testData({ maxHp: 10 }));
-    const attack = playTurn(state, SMALL_MOVE).events.find((e) => e.type === 'partyAttack');
+    const attack = playTurn(state, SMALL_CLEAR).events.find((e) => e.type === 'partyAttack');
     expect(attack).toMatchObject({ damage: 30, hpBefore: 10, hpAfter: 0 });
   });
 
   it('敵の攻撃で味方の HP が 0 になったら敗北する', () => {
     const state = createBattleState('s', testData({ maxHp: 9999, attack: 100, attackInterval: 1 }));
-    const result = playTurn(state, SMALL_MOVE);
+    const result = playTurn(state, SMALL_CLEAR);
     expect(result.state.outcome).toBe('defeat');
     expect(result.state.party[0]?.hp).toBe(0);
     expect(result.phases.slice(-3)).toEqual(['enemyAction', 'checkAfterEnemy', 'defeat']);
@@ -187,8 +180,8 @@ describe('playTurn: 勝敗', () => {
   });
 
   it('戦闘が終わった後は、入れ替えてもターンを消費せず何も起きない', () => {
-    const won = playTurn(createBattleState('s', testData({ maxHp: 30 })), SMALL_MOVE).state;
-    const after = playTurn(won, SMALL_MOVE);
+    const won = playTurn(createBattleState('s', testData({ maxHp: 30 })), SMALL_CLEAR).state;
+    const after = playTurn(won, SMALL_CLEAR);
     expect(after.consumedTurn).toBe(false);
     expect(after.state).toBe(won);
     expect(after.events).toEqual([]);

@@ -5,7 +5,11 @@
 **純粋なゲームロジック**を置く層です(ルール判定・計算・状態の更新など)。
 描画・音声・入力・時刻に依存しないため、Vitest で画面なしにテストできます。
 
-雛形では空です。雛形から作った各ゲームのリポジトリで実装します。
+このゲームでは、次のフォルダに分けています(詳細は `docs/GAME_DESIGN.md` §2〜§4)。
+
+- `puzzle/`: パズル(盤面の生成・マッチ判定・連鎖・詰みの再配置)
+- `battle/`: バトル(ダメージ計算・ターンの進行・勝敗)
+- `session/`: パズルとバトルの接続(BattleSession)
 
 ## 依存ルール
 
@@ -14,6 +18,7 @@
 - `Math.random()` と `Date.now()` は使わない
   - 乱数は `src/core/SeededRng` のインスタンスを**引数で受け取る**
   - 時刻や経過時間が必要な場合も引数で受け取る
+- `puzzle/` と `battle/` は互いに import しない。両方を import してよいのは `session/` だけ(`docs/decisions/003-battle-session-in-systems.md`)
 - 上記の違反は ESLint(`no-restricted-imports` / `no-restricted-properties`)でエラーになります(`npm run lint`)
 
 ## テストの方針

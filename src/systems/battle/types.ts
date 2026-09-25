@@ -2,9 +2,28 @@
  * バトルロジックで使う型。描画に依存しない。
  */
 
+/**
+ * 1回の入れ替えで消えたパネル(バトルが使う部分だけ)。
+ * systems/puzzle に依存しないため、バトル側で形を決める。MoveResult からの変換は systems/session が行う。
+ */
+export interface ClearedTiles {
+  /** 連鎖の段ごとの、消えたまとまりの一覧(steps[i] が i+1 段目)。空なら揃わなかった入れ替え */
+  readonly steps: readonly (readonly ClearedGroup[])[];
+}
+
+/** 消えたまとまり1つ */
+export interface ClearedGroup {
+  /** パネルの種類の番号(systems/puzzle の TileKind と同じ値) */
+  readonly kind: number;
+  /** 消えたパネルの数 */
+  readonly count: number;
+}
+
 /** 戦闘の参加者(味方・敵)の状態 */
 export interface Combatant {
   readonly id: string;
+  /** 表示名(データの name。描画側は data を import できないため、状態に持たせる) */
+  readonly name: string;
   readonly hp: number;
   readonly maxHp: number;
   readonly attack: number;

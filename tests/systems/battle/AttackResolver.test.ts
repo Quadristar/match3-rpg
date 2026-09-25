@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { effectOf, resolveAttacks } from '../../../src/systems/battle/AttackResolver';
 import type { TileEffectTable } from '../../../src/data/tileEffects';
-import { fakeMove, INVALID_MOVE } from './fakeMove';
+import { cleared, NOTHING_CLEARED } from './cleared';
 
 describe('resolveAttacks(パネル → 行動)', () => {
-  it('揃わない入れ替えからは行動を作らない', () => {
-    expect(resolveAttacks(INVALID_MOVE, 'hero')).toEqual([]);
+  it('何も消えなかった(揃わない入れ替え)なら行動を作らない', () => {
+    expect(resolveAttacks(NOTHING_CLEARED, 'hero')).toEqual([]);
   });
 
   it('既定の規則では全種類が攻撃になり、リーダーの1つの攻撃にまとまる(段ごとの内訳を残す)', () => {
-    const move = fakeMove([
+    const move = cleared([
       [
         { kind: 0, count: 3 },
         { kind: 3, count: 4 },
@@ -35,7 +35,7 @@ describe('resolveAttacks(パネル → 行動)', () => {
       default: { action: 'attack' },
       byKind: { 0: { action: 'attack', attribute: 'fire' }, 1: { action: 'attack', attribute: 'water' } },
     };
-    const move = fakeMove([
+    const move = cleared([
       [
         { kind: 0, count: 3 },
         { kind: 1, count: 4 },

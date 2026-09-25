@@ -61,17 +61,18 @@
 |---|---|---|
 | `src/core/` | 汎用基盤(EventBus, StateMachine, SeededRng, ObjectPool など) | 外部依存なし |
 | `src/data/` | キャラ・敵・ステージ・パネル効果などの型付きデータ | `core` |
-| `src/systems/` | **純粋なゲームロジック**(パズル・バトル・成長) | `core`, `data` |
+| `src/systems/` | **純粋なゲームロジック**(パズル・バトル・成長。パズルとバトルの接続は `systems/session`) | `core`, `data` |
 | `src/services/` | アセット・音声・セーブ・入力・設定・レイアウト | `core`, 外部ライブラリ |
 | `src/presentation/` | 描画・演出・UI・シーン | `core`, `systems`(主に型), `services`, 外部ライブラリ |
-| `src/app/` | 起動処理、シーン管理、各層の接続(ロジックと演出の橋渡しを含む) | すべて |
+| `src/app/` | 起動処理、シーン管理、各層の接続 | すべて |
 
 **絶対に守ること:**
 
 - `core` / `data` / `systems` から `pixi.js` / `gsap` / `howler` / `services` / `presentation` / `app` を import しない(ESLint でエラーになる)
 - `systems` 内で `Math.random()` と `Date.now()` を使わない。乱数は `SeededRng` を引数で受け取る
 - パズルは「**先に連鎖の最後まで計算して結果を返し、描画側がそれを再生する**」方式を守る。ロジックがアニメーションの完了を待つ作りにしない
-- パズルとバトルを直接結びつけない。両者の接続は `app/` の BattleDirector だけが行う
+- パズルとバトルを直接結びつけない。`systems/puzzle` と `systems/battle` は互いに import せず、両者の接続は `systems/session`(BattleSession)だけが行う(ESLint でエラーになる。`docs/decisions/003-battle-session-in-systems.md`)
+- 盤面の連鎖とバトルの出来事の再生の順番は、描画側(BattleScene)が決める
 - パネルが消えたときの効果(ダメージ・回復など)の変換規則はコードに書かず、`data/tileEffects` に置く
 
 ---
@@ -168,8 +169,8 @@ npm run check      # typecheck + lint + test + build をまとめて実行
 
 ## 10. 現在のフェーズ
 
-- 現在: **Phase 4a(バトルロジック＋テスト)**
-  - Phase 3a(パズルロジック＋テスト)・Phase 3b(パズル表示)は完了
+- 現在: **Phase 4b(バトル表示)**
+  - Phase 3a(パズルロジック)・Phase 3b(パズル表示)・Phase 4a(バトルロジック)は完了
   - Phase 1〜2 は雛形リポジトリで完了済み(雛形 v1.0.0)
   - 開発準備: デモの削除、最小の形と仮のタイトル画面、ドキュメントの整備(完了)
 - フェーズの一覧と内容は `docs/GAME_DESIGN.md` の「開発フェーズ」を参照
