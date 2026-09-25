@@ -29,17 +29,18 @@
 src/
 ├─ data/
 │   ├─ puzzleConfig.ts       盤面の大きさ・パネルの種類数・上限回数(Phase 3a で作成)
-│   ├─ characters.ts
-│   ├─ enemies.ts
-│   ├─ stages.ts
+│   ├─ characters.ts         味方(Phase 4a で作成)
+│   ├─ enemies.ts            敵と報酬(Phase 4a で作成)
+│   ├─ stages.ts             戦う敵と味方の編成(Phase 4a で作成)
+│   ├─ battleRules.ts        段の倍率・最低ダメージ(Phase 4a で作成)
 │   ├─ skills.ts
-│   └─ tileEffects.ts        パネル消去 → 行動 の変換規則
+│   └─ tileEffects.ts        パネル消去 → 行動 の変換規則(Phase 4a で作成)
 ├─ systems/
 │   ├─ puzzle/               Board, MatchFinder, Gravity, Refill,
 │   │                        CascadeResolver, MoveValidator, DeadlockChecker,
 │   │                        BoardGenerator, Reshuffle, resolveMove(Phase 3a で作成)
 │   ├─ battle/               BattleState, TurnFlow, AttackResolver,
-│   │                        DamageCalculator, EnemyAI
+│   │                        DamageCalculator, EnemyAI(Phase 4a で作成)
 │   └─ progression/          経験値・レベル計算
 ├─ app/
 │   └─ BattleDirector.ts     パズルとバトルの橋渡し(両者が接する唯一の場所)
@@ -142,6 +143,16 @@ MoveResult ─▶ AttackResolver ─▶ Action[] ─▶ BattleState.apply() ─�
 - **TurnFlow**: 状態機械
   `入力待ち → パズル解決 → 味方行動 → 勝敗判定 → 敵行動 → 勝敗判定 → 入力待ち`
 - 時間制限を導入する場合は「ターン終了条件」の一つとして追加する
+
+### Phase 4a で決めたこと(仮仕様)
+
+- 有効な入れ替え1回を1ターンとする。揃わない入れ替え・再配置はターンを消費しない
+- 味方の攻撃は1ターンに1回(同じ効果のパネルを1つの攻撃にまとめる)。行動するのは編成の先頭
+- ダメージ: 連鎖の段ごとに「消えたパネル数 × 攻撃力 × 段の倍率(1 + 0.25 × (段 − 1))」を合計し、防御を引く。小数は切り捨て、最低 1
+- バフ・デバフは修飾子(合計への倍率 → 防御への倍率 → 最終の倍率の順)として差し込む
+- 敵は「次の攻撃までの残りターン数」を持ち、毎ターン 1 減らして 0 で攻撃し、間隔の値に戻す
+- 味方の攻撃で敵の HP が 0 になったら、敵は行動せずに勝利。敵の攻撃で味方が全員 HP 0 になったら敗北
+- `BattleEvent` の種類: `turnStart` / `partyAttack`(段ごとの内訳・HP の前後) / `enemyAttack`(HP の前後) / `enemyCountdown` / `victory`(経験値) / `defeat`
 - **BattleDirector**(`app/`): PuzzleSystem の結果を BattleSystem に渡し、`BattleEvent[]` を演出キューとして presentation に流す
 
 将来の候補: パーティ、属性、スキル、必殺技、状態異常、バフ・デバフ、装備、アイテム
@@ -200,7 +211,7 @@ Phase 1〜2 は雛形リポジトリで実施済み。
 - 盤面 7×7、パネル5種(種類A〜E)
 - 隣接パネルの入れ替え。揃わなければ元に戻す
 - 3個以上で消去 → 落下 → 補充 → 連鎖。連鎖段数をコンボ数とする
-- 全種類が攻撃になる: 1パネルあたり 10 × (1 + 0.25 × (コンボ − 1))
+- 全種類が攻撃になる: 1パネルあたり 10 × (その段の倍率)。段の倍率は 1 + 0.25 × (段 − 1)(1段目 1.0、2段目 1.25 …)。1ターンの合計から防御を引く
 - 敵1体(HP 300)。3ターンごとに味方へ20ダメージ
 - 味方 HP 100、Lv1
 - 勝利で EXP +50 → リザルト → 規定値でレベルアップ → タイトルへ

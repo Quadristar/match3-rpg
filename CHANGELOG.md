@@ -6,6 +6,29 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — Phase 4a: バトルロジック
+
+### 追加
+
+- `src/data/`(すべて仮仕様)
+  - `characters.ts`: 味方1人(HP 100・攻撃力 10・防御 0)
+  - `enemies.ts`: 敵1体(HP 300・攻撃力 20・防御 0・3ターンごとに攻撃・経験値 50)
+  - `stages.ts`: 戦う敵と味方の編成
+  - `tileEffects.ts`: パネル → 行動 の変換規則(今は全種類が攻撃。属性型・行動型に差し替えられる形)
+  - `battleRules.ts`: 段の倍率の増え幅(0.25)・最低ダメージ(1)
+- `src/systems/battle/`: バトルロジック(Pixi・GSAP に依存しない純粋な TypeScript)
+  - `AttackResolver.ts`: MoveResult → 行動(段ごとの内訳付き)
+  - `DamageCalculator.ts`: 段の倍率・防御・切り捨て・最低値・修飾子(バフ・デバフ)
+  - `BattleState.ts`: 戦闘の状態の作成と行動の適用(出来事を返す)
+  - `EnemyAI.ts`: 規定ターンごとの攻撃と、次の攻撃までの残りターン数
+  - `TurnFlow.ts`: ターンの進行(状態機械)と勝敗の判定
+- テスト: データの整合性、ダメージ計算、パネル → 行動、ターンの進行・敵の攻撃の間隔・勝敗、ランダムな操作での戦闘
+
+### 変更
+
+- `CLAUDE.md`: 現在のフェーズを Phase 4a に更新
+- `docs/GAME_DESIGN.md`: ディレクトリ構成、Phase 4a で決めたこと、§9 のダメージの書き方(段ごとの倍率)
+
 ## [Unreleased] — ライセンス表記と favicon
 
 ### 追加
