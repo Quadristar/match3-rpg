@@ -37,8 +37,8 @@ describe('createBattleState', () => {
     const state = createBattleState('prototype');
     expect(state.turn).toBe(0);
     expect(state.outcome).toBe('ongoing');
-    expect(state.party).toEqual([{ id: 'hero', hp: 100, maxHp: 100, attack: 10, defense: 0 }]);
-    expect(state.enemy).toMatchObject({ id: 'prototype-enemy', hp: 300, maxHp: 300, attack: 20, turnsUntilAttack: 3 });
+    expect(state.party).toEqual([{ id: 'hero', name: '主人公(仮)', hp: 100, maxHp: 100, attack: 10, defense: 0 }]);
+    expect(state.enemy).toMatchObject({ id: 'prototype-enemy', name: '敵(仮)', hp: 300, maxHp: 300, attack: 20, turnsUntilAttack: 3 });
   });
 
   it('存在しないステージ・参照先はエラー', () => {

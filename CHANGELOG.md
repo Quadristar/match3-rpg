@@ -6,6 +6,30 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — Phase 4b: バトル表示と systems/session
+
+### 追加
+
+- `src/systems/session/BattleSession.ts`: パズルとバトルの接続(盤面・バトルの状態・乱数を持ち、resolveMove → playTurn をまとめて行う)とテスト
+- `docs/decisions/003-battle-session-in-systems.md`: パズルとバトルの接続を `systems/session` に置く決定
+- `src/presentation/views/battle/`: バトルの表示(最小限)
+  - `BattleView.ts`: 出来事の再生(GSAP)。ダメージの数字・HP バーの減少・画面の揺れ・即座の完了
+  - `EnemyPanel.ts`(仮の図形・HP バー・次の攻撃までの残りターン数)、`PartyPanel.ts`、`HpBar.ts`
+  - `ResultOverlay.ts`: 勝利・敗北の表示と「もう一度」「タイトルへ」ボタン
+  - `battlePlaybackPlan.ts`: BattleEvent[] → 再生の手順(Pixi・GSAP 非依存)とテスト
+  - `battleViewConfig.ts`: 表示の時間・見た目(仮仕様)
+- `src/presentation/views/playbackConfig.ts`: 再生全体の速さ(盤面とバトルで共通)
+- ESLint: `systems/puzzle` と `systems/battle` の相互の import を禁止(両方を使えるのは `systems/session` だけ)と、そのテスト
+
+### 変更
+
+- `systems/battle`: 入力を `MoveResult` から、バトル側で定めた「消えたパネル」(`ClearedTiles`)に変更(`systems/puzzle` に依存しないため)。`Combatant` に表示名 `name` を追加
+- `BattleScene`: BattleSession を使い、盤面の連鎖 → バトルの出来事 → 勝敗の順に再生する。再生中は入力を止める。「もう一度」で戦闘をやり直す
+- `boardViewConfig.ts`: `playbackSpeed` を `playbackConfig.ts` に移動
+- `CLAUDE.md`・`docs/GAME_DESIGN.md`: BattleDirector(`app/`)の記述を BattleSession(`systems/session`)に改め、現在のフェーズを Phase 4b に更新
+- `src/data/README.md`・`src/systems/README.md`: 雛形の記述(「雛形では空です」)を、このゲームの内容に更新
+- `README.md`: 現在の状態を Phase 4b に更新
+
 ## [Unreleased] — Phase 4a: バトルロジック
 
 ### 追加

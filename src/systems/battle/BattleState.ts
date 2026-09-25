@@ -39,7 +39,7 @@ export function createBattleState(stageId: string, data: BattleData = DEFAULT_BA
     if (c === undefined) {
       throw new Error(`キャラクター "${id}" がありません(ステージ "${stageId}")`);
     }
-    return { id: c.id, hp: c.maxHp, maxHp: c.maxHp, attack: c.attack, defense: c.defense };
+    return { id: c.id, name: c.name, hp: c.maxHp, maxHp: c.maxHp, attack: c.attack, defense: c.defense };
   });
   if (party.length === 0) {
     throw new Error(`ステージ "${stageId}" の編成が空です`);
@@ -49,6 +49,7 @@ export function createBattleState(stageId: string, data: BattleData = DEFAULT_BA
     party,
     enemy: {
       id: enemy.id,
+      name: enemy.name,
       hp: enemy.maxHp,
       maxHp: enemy.maxHp,
       attack: enemy.attack,

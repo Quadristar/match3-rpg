@@ -22,6 +22,8 @@ export interface ClearedGroup {
 /** 戦闘の参加者(味方・敵)の状態 */
 export interface Combatant {
   readonly id: string;
+  /** 表示名(データの name。描画側は data を import できないため、状態に持たせる) */
+  readonly name: string;
   readonly hp: number;
   readonly maxHp: number;
   readonly attack: number;

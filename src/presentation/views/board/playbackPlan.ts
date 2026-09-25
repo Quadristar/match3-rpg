@@ -2,7 +2,7 @@
  * MoveResult を「再生の手順」に変える。Pixi・GSAP に依存しない。
  *
  * 描画側(BoardView)は、actions を先頭から順に1つずつ再生する(前の手順が終わってから次へ)。
- * 時間はすべて playbackSpeed が 1 のときの値。全体の速さは再生側で1か所だけ変える。
+ * 時間はすべて再生全体の速さ(PLAYBACK_CONFIG.speed)が 1 のときの値。全体の速さは再生側で1か所だけ変える。
  */
 import { type BoardState, type Cell, type MoveResult, nextBoard, type Tile } from '../../../systems/puzzle';
 import type { PlaybackTimings } from './boardViewConfig';

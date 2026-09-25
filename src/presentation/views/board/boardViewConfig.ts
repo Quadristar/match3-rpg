@@ -2,12 +2,7 @@
  * 盤面の表示・再生・操作の設定値(すべて仮仕様)。
  */
 export const BOARD_VIEW_CONFIG = {
-  /**
-   * 再生全体の速さ(1 が標準、2 なら2倍速)。
-   * 将来の倍速・スキップは、この値(または BoardView.setPlaybackSpeed)で切り替える
-   */
-  playbackSpeed: 1,
-  /** 再生の各段階の時間(ミリ秒。playbackSpeed が 1 のとき) */
+  /** 再生の各段階の時間(ミリ秒。再生全体の速さ(PLAYBACK_CONFIG.speed)が 1 のとき) */
   timings: {
     /** 入れ替え(揃わないときは、戻す動きにも同じ時間を使う) */
     swapMs: 160,

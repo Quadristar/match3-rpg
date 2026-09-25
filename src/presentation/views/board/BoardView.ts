@@ -1,7 +1,7 @@
 /**
  * 盤面の表示と、再生の手順(PlaybackPlan)の再生。
  *
- * - 再生は GSAP のタイムラインで行う。全体の速さは timeScale の1か所で変える(setPlaybackSpeed)
+ * - 再生は GSAP のタイムラインで行う。全体の速さは timeScale の1か所で変える(PLAYBACK_CONFIG.speed・setPlaybackSpeed)
  * - finishNow() で再生を即座に終え、再生後の盤面(plan.finalBoard)から描き直す(回転時など)
  * - パネルの表示物(TileView)は ObjectPool で再利用する
  * - 盤面の外(上)から落ちてくる補充のパネルは、盤面の範囲でマスクして隠す
@@ -13,6 +13,7 @@ import { Container, type DestroyOptions, Graphics } from 'pixi.js';
 import { ObjectPool } from '../../../core/ObjectPool';
 import type { BoardState, Cell } from '../../../systems/puzzle';
 import type { BoardGeometry } from './BoardGeometry';
+import { PLAYBACK_CONFIG } from '../playbackConfig';
 import { BOARD_VIEW_CONFIG } from './boardViewConfig';
 import type { PlaybackAction, PlaybackPlan } from './playbackPlan';
 import { TileView } from './TileView';
@@ -49,7 +50,7 @@ export class BoardView extends Container {
   private selected: Cell | null = null;
   private timeline: gsap.core.Timeline | null = null;
   private playing: { readonly plan: PlaybackPlan; readonly callbacks: PlaybackCallbacks } | null = null;
-  private speed: number = C.playbackSpeed;
+  private speed: number = PLAYBACK_CONFIG.speed;
 
   constructor() {
     super({ label: 'BoardView' });
