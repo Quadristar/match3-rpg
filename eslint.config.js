@@ -14,6 +14,9 @@
  * | presentation | core, systems(主に型), services, 外部ライブラリ     |
  * | app          | すべて                                               |
  *
+ * systems の中では、puzzle と battle は互いに import できない。両方を import してよいのは
+ * systems/session だけ(docs/decisions/003)。
+ *
  * デモ(presentation/scenes/demo/)は main.ts 以外から import できない。
  *
  * 判定方法: src/ 直下の層フォルダを指す相対パス(../data/… など)と、
@@ -63,24 +66,73 @@ const FORBID_DEMO = {
 };
 
 /**
+ * systems の中のフォルダ(puzzle・battle・session)への import を禁止するパターン。
+ * `../battle`・`../../systems/battle`・`src/systems/battle` などを検出する。
+ * @param {string} folder 禁止するフォルダ
+ * @param {string} from  ルールを適用するフォルダ(メッセージ用)
+ */
+function forbidSystemsFolder(folder, from) {
+  return {
+    regex: `^(?:(?:\\.\\./)+(?:systems/)?|(?:.*/)?src/systems/)${folder}(?:/|$)`,
+    message: `依存ルール違反: systems/${from} から systems/${folder} は import できません。パズルとバトルの両方を使う処理は systems/session に置いてください(docs/decisions/003)。`,
+  };
+}
+
+/**
  * 層ごとの no-restricted-imports 設定を作る。
  * @param {string} layer 対象の層
  * @param {string[]} allowedLayers import を許可する層
  * @param {boolean} allowPackages 外部ライブラリを許可するか
  */
 function layerRule(layer, allowedLayers, allowPackages) {
+  return {
+    files: [`src/${layer}/**/*.ts`],
+    rules: {
+      'no-restricted-imports': ['error', { patterns: layerPatterns(layer, allowedLayers, allowPackages) }],
+    },
+  };
+}
+
+/**
+ * 層の禁止パターン(layerRule と systemsFolderRule で共通)。
+ * @param {string} layer 対象の層
+ * @param {string[]} allowedLayers import を許可する層
+ * @param {boolean} allowPackages 外部ライブラリを許可するか
+ */
+function layerPatterns(layer, allowedLayers, allowPackages) {
   const forbidden = LAYERS.filter((l) => l !== layer && !allowedLayers.includes(l));
   const patterns = [...forbidden.map((l) => forbidLayer(l, layer)), FORBID_DEMO];
   if (!allowPackages) {
     patterns.push(forbidPackages(layer));
   }
+  return patterns;
+}
+
+/**
+ * systems の中のフォルダ間の依存ルール(docs/decisions/003)。
+ * 同じファイルに対する no-restricted-imports は後の設定で上書きされるため、systems の層のパターンも含める。
+ * @param {string} folder 対象のフォルダ
+ * @param {string[]} forbiddenFolders import を禁止するフォルダ
+ */
+function systemsFolderRule(folder, forbiddenFolders) {
   return {
-    files: [`src/${layer}/**/*.ts`],
+    files: [`src/systems/${folder}/**/*.ts`],
     rules: {
-      'no-restricted-imports': ['error', { patterns }],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            ...layerPatterns('systems', SYSTEMS_ALLOWED_LAYERS, false),
+            ...forbiddenFolders.map((f) => forbidSystemsFolder(f, folder)),
+          ],
+        },
+      ],
     },
   };
 }
+
+/** systems が import してよい層 */
+const SYSTEMS_ALLOWED_LAYERS = ['core', 'data'];
 
 export default defineConfig(
   { ignores: ['dist/', 'coverage/', 'node_modules/'] },
@@ -106,7 +158,10 @@ export default defineConfig(
   // ---- 依存ルール ----
   layerRule('core', [], false),
   layerRule('data', ['core'], false),
-  layerRule('systems', ['core', 'data'], false),
+  layerRule('systems', SYSTEMS_ALLOWED_LAYERS, false),
+  // systems の中: パズルとバトルは互いに import しない。両方を使えるのは session だけ
+  systemsFolderRule('puzzle', ['battle', 'session']),
+  systemsFolderRule('battle', ['puzzle', 'session']),
   layerRule('services', ['core'], true),
   layerRule('presentation', ['core', 'systems', 'services'], true),
   // app はすべての層を import できる(デモだけは禁止)
