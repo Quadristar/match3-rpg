@@ -3,9 +3,14 @@
  */
 export const TITLE_STYLE = {
   text: '(仮)タイトル',
+  hint: 'タップしてはじめる',
   fontFamily: 'system-ui, sans-serif',
   fontSize: 72,
+  hintFontSize: 32,
   textColor: 0xffffff,
+  hintColor: 0xb8c0d8,
+  /** 案内の文字の、タイトルの中心からの距離 */
+  hintOffsetY: 120,
   /** 余白を含む画面全体の色 */
   screenColor: 0x1b1e2b,
   /** 文字の幅の上限(main 領域の幅に対する割合)。超えたら縮小する */

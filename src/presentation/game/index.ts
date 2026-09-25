@@ -1,6 +1,7 @@
 /**
  * Game.start に渡す内容(レイアウト定義・マニフェスト・セーブデータの形式・シーン)。
  */
+import { BattleScene } from '../scenes/battle/BattleScene';
 import { TitleScene } from '../scenes/title/TitleScene';
 import type { SceneRegistry } from '../scenes/Scene';
 import { gameManifest, type GameManifest } from './gameAssets';
@@ -9,7 +10,8 @@ import { type GameSave, gameSaveSchema } from './gameSave';
 import type { SceneKey } from './sceneKeys';
 
 const scenes: SceneRegistry<SceneKey, GameLayout, GameManifest, GameSave> = {
-  title: () => new TitleScene(),
+  title: (context) => new TitleScene(context),
+  battle: (context) => new BattleScene(context),
 };
 
 const firstScene: SceneKey = 'title';

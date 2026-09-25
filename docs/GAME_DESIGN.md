@@ -46,12 +46,15 @@ src/
 └─ presentation/
     ├─ game/                 Game.start に渡す設定一式(雛形の手順で作成済み)
     │                        sceneKeys, gameLayout(レイアウト定義), gameAssets(マニフェスト),
-    │                        gameSave(セーブデータの形式), index
+    │                        gameSave(セーブデータの形式), urlOptions(?seed), index
     ├─ scenes/               シーンごとにフォルダを分ける
-    │   ├─ title/            TitleScene(仮のタイトル画面として作成済み)
-    │   ├─ battle/           BattleScene
+    │   ├─ title/            TitleScene(仮のタイトル画面。タップでバトルへ)
+    │   ├─ battle/           BattleScene(Phase 3b 時点では盤面だけ)
     │   └─ result/           ResultScene
-    └─ views/                BoardView, TileView, UnitPortrait, HpBar, DamageNumbers
+    └─ views/
+        ├─ board/            BoardView, TileView, BoardGeometry, BoardInputController,
+        │                    playbackPlan, boardViewConfig(Phase 3b で作成)
+        └─ (将来)            UnitPortrait, HpBar, DamageNumbers
 ```
 
 各ディレクトリは、実際に必要になったフェーズで作成する。
@@ -108,9 +111,21 @@ type CascadeStep = {
 
 ### 入力
 
-- 「スワイプ」と「2回タップ」の両方で入れ替えを受け付ける
-- 入力は `swap(a, b)` という操作の意図に変換してからロジックに渡す
+- 「ドラッグ」と「2回タップ」の両方で入れ替えを受け付ける(`docs/decisions/001-puzzle-swap-input.md`)
+  - ドラッグ: 指を置いたパネルから、パネル幅の 40%(仮仕様・設定値)動いた時点で方向を確定し、指を離す前に入れ替える
+  - 2回タップ: 1回目で選択(枠を表示)、隣をタップで入れ替え、隣でないパネルをタップで選択し直し
+- 入力は `swap(a, b)` という操作の意図に変換してからロジックに渡す(`BoardInputController`)
 - 連鎖の演出中は入力を受け付けない
+
+### 表示と再生(Phase 3b)
+
+- `MoveResult` を、Pixi に依存しない「再生の手順」(`playbackPlan`)に変換し、`BoardView` が GSAP のタイムラインで順に再生する
+  - 手順: 入れ替え → 消去(連鎖の段数付き) → 落下と補充(補充は盤面の上から落ちる) → 段の間の待ち → … → 再配置
+  - 揃わない入れ替えは、入れ替えてから元に戻す
+- 各段階の時間と全体の速さ(`playbackSpeed`)は `boardViewConfig.ts` の設定値。倍速・スキップは全体の速さ(タイムラインの timeScale)の1か所で変える
+- 画面が回転したら、再生を即座に終え、再生後の盤面から描き直す
+- パネルの表示物は ObjectPool で再利用する
+- `?seed=数値` で盤面の乱数のシードを固定できる(不具合の再現用)。`?debug` のときはシードを画面に表示する
 
 ---
 
@@ -154,9 +169,10 @@ MoveResult ─▶ AttackResolver ─▶ Action[] ─▶ BattleState.apply() ─�
 
 - 最初は **タイトル → バトル → リザルト** の最小構成
 - 将来: メインメニュー、ステージ選択、キャラクター画面、ステータス画面、設定画面
-- バトル画面のレイアウト(仮):
-  - 縦画面: 上に敵と立ち絵、中央に HP などの情報、下に盤面
-  - 横画面: 左に立ち絵、中央に盤面、右に敵とステータス
+- バトル画面のレイアウト(仮。`presentation/game/gameLayout.ts` の領域 `board` / `enemy` / `portrait` / `info`):
+  - 縦画面: 上に立ち絵(左)と敵(右)、中央に HP などの情報、下に盤面
+  - 横画面: 左に立ち絵、中央に盤面、右に敵(上)とステータス(下)
+  - Phase 3b の時点で中身があるのは盤面だけ。`?debug` のときは各領域の枠と名前を表示する
 
 ---
 

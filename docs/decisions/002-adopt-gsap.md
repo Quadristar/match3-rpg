@@ -29,6 +29,6 @@ Phase 3b(パズル表示)で、入れ替え・消去・落下・連鎖・再配�
 
 ## 影響
 
-- 容量: GSAP 本体は圧縮後で約 70KB(gzip で約 28KB)増える
+- 容量: Phase 3b(GSAP 本体と盤面の表示のコード)で、ビルド後の JavaScript が約 92KB(gzip で約 35KB)増えた
 - GSAP は自前の requestAnimationFrame で動く(Pixi の ticker とは別)。シーン終了時にタイムラインを必ず止める
 - 雛形(alcyon-game-template)にも同じ判断を還元する候補とする

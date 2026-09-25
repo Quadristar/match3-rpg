@@ -1,2 +1,2 @@
 /** シーンのキー。シーンを増やしたらここに足す */
-export type SceneKey = 'title';
+export type SceneKey = 'title' | 'battle';
