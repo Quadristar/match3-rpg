@@ -57,6 +57,8 @@ URL の末尾に `?debug` を付けると、画面の右上にデバッグ表示
 
 起動に失敗した場合は、原因のエラーメッセージが画面に表示されます。
 
+使っているライブラリのライセンス一覧は、公開 URL の `licenses.txt`(https://quadristar.github.io/match3-rpg/licenses.txt)で見られます(ビルド時に自動で作られる)。
+
 ### ローカルで動かす(PC がある場合)
 
 Node.js 22.13 以上が必要です。

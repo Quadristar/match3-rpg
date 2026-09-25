@@ -6,6 +6,18 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — ライセンス表記と favicon
+
+### 追加
+
+- ビルドの成果物にライセンス一覧 `licenses.txt` を含める(`vite.config.ts` の `build.license`。**共通基盤の変更**)
+- 仮の favicon(`public/favicon.svg`)。`index.html` から参照する(favicon がなく 404 になっていたのを解消)
+
+### 変更
+
+- `vite.config.ts`: ライブラリの著作権表記のコメントを、圧縮後も残す(`build.rolldownOptions.output.comments.legal`。**共通基盤の変更**)。GSAP の著作権表記がビルド後に消えていたため
+- `docs/decisions/002-adopt-gsap.md`・`README.md`: 著作権表記とライセンス一覧の扱いを追記
+
 ## [Unreleased] — Phase 3b: パズル表示
 
 ### 追加
