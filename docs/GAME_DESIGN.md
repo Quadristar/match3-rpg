@@ -28,6 +28,7 @@
 ```
 src/
 ├─ data/
+│   ├─ puzzleConfig.ts       盤面の大きさ・パネルの種類数・上限回数(Phase 3a で作成)
 │   ├─ characters.ts
 │   ├─ enemies.ts
 │   ├─ stages.ts
@@ -35,7 +36,8 @@ src/
 │   └─ tileEffects.ts        パネル消去 → 行動 の変換規則
 ├─ systems/
 │   ├─ puzzle/               Board, MatchFinder, Gravity, Refill,
-│   │                        CascadeResolver, MoveValidator, DeadlockChecker
+│   │                        CascadeResolver, MoveValidator, DeadlockChecker,
+│   │                        BoardGenerator, Reshuffle, resolveMove(Phase 3a で作成)
 │   ├─ battle/               BattleState, TurnFlow, AttackResolver,
 │   │                        DamageCalculator, EnemyAI
 │   └─ progression/          経験値・レベル計算
@@ -65,6 +67,8 @@ src/
 ```ts
 type MoveResult = {
   valid: boolean;
+  move: Move;                // 入れ替えた2マス(a, b)
+  reason?: InvalidMoveReason; // valid: false のときの理由(盤面の外・隣でない・揃わない)
   steps: CascadeStep[];      // 連鎖1段ごと
   finalBoard: BoardState;
   reshuffled?: BoardState;   // 詰み発生時の再配置結果
@@ -79,6 +83,7 @@ type CascadeStep = {
 ```
 
 描画側(BoardView)は `steps` を順番に再生するだけにする。
+正確な型は `src/systems/puzzle/types.ts`(実際は `valid` で分かれる型。上は概要)。
 
 この方式の利点:
 

@@ -6,6 +6,30 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — Phase 3a: パズルロジック
+
+### 追加
+
+- `src/data/puzzleConfig.ts`: パズルの設定値(仮仕様: 7×7・5種・連鎖の上限 100 段・生成のやり直し 100 回・並べ替えのやり直し 50 回)
+- `src/systems/puzzle/`: パズルロジック(Pixi に依存しない純粋な TypeScript)
+  - `types.ts`: `Tile`(`{ kind, modifiers }`。modifiers は今は常に空)・`BoardState`・`MatchGroup`・`CascadeStep`・`MoveResult` など
+  - `Board.ts`: 盤面の補助(生成・参照・隣接判定・入れ替え)
+  - `MatchFinder.ts`: 縦・横 3 個以上のマッチ判定。マスを共有する縦と横は1つにまとめ、形状(line3 / line4 / line5 / L / T)を判別
+  - `MoveValidator.ts`: 入れ替えの判定(盤面の外・隣でない・揃わない)
+  - `DeadlockChecker.ts`: 動かせる手の検索 `findMoves`(ヒント機能にも使える)と `hasMove`
+  - `Gravity.ts` / `Refill.ts` / `CascadeResolver.ts`: 消去・落下・補充・連鎖。1段ごとに記録し、上限を超えたら `CascadeLimitError`
+  - `BoardGenerator.ts`: 揃っている箇所がなく手が1つ以上ある盤面の生成
+  - `Reshuffle.ts`: 詰んだ盤面の並べ替え
+  - `resolveMove.ts`: 入口 `resolveMove(board, a, b, rng)` と `nextBoard(result)`
+  - `puzzleConfigCheck.ts`: 設定値の検査
+- テスト: `tests/systems/puzzle/`(盤面を文字で書く補助 `boardText.ts`、MoveResult だけで盤面を再生する `replay.ts` を含む)
+- `docs/decisions/001-puzzle-swap-input.md`: パネルの入れ替え操作の決定(速さを問わないドラッグ方式＋2回タップ。実装は Phase 3b)
+
+### 変更
+
+- `CLAUDE.md`: 現在のフェーズを Phase 3a に更新
+- `docs/GAME_DESIGN.md`: ディレクトリ構成と MoveResult の型を実装に合わせて更新
+
 ## [0.1.0] - 2026-09-24 — 開発準備
 
 雛形 alcyon-game-template **v1.0.0** から作成し、`docs/NEW_GAME.md` の手順でゲーム開発を始められる状態にした。
