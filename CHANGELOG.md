@@ -6,6 +6,33 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — Phase 3b: パズル表示
+
+### 追加
+
+- 依存ライブラリ: **GSAP 3.15**(`presentation/` でのみ使う。`docs/decisions/002-adopt-gsap.md`)
+- `src/core/ObjectPool.ts`: オブジェクトプール(**共通基盤への追加**)とテスト
+- `src/presentation/debug/LayoutRegionsOverlay.ts`: レイアウトの領域の枠と名前の表示(**共通基盤への追加**)
+- `src/presentation/views/board/`: 盤面の表示
+  - `BoardView.ts`: 盤面の描画と再生(GSAP のタイムライン)。全体の速さの変更・即座の完了・ObjectPool での再利用
+  - `TileView.ts`: パネルの表示(仮: 色付きの図形)
+  - `BoardGeometry.ts`: マスと論理座標の変換(Pixi 非依存)
+  - `BoardInputController.ts`: ドラッグ・2回タップを入れ替えの意図に変換(Pixi 非依存)
+  - `playbackPlan.ts`: MoveResult を再生の手順に変換(Pixi・GSAP 非依存)
+  - `boardViewConfig.ts`: 再生の時間・全体の速さ・ドラッグのしきい値・見た目(仮仕様)
+- `src/presentation/scenes/battle/`: BattleScene(盤面・連鎖の段数の表示・仮の「タイトルへ」ボタン)
+- `src/presentation/game/urlOptions.ts`: `?seed=数値` で盤面のシードを固定
+- テスト: ObjectPool・gameLayout・urlOptions・BoardGeometry・BoardInputController・playbackPlan
+- `docs/decisions/002-adopt-gsap.md`
+
+### 変更
+
+- `gameLayout.ts`: 領域 `board` / `enemy` / `portrait` / `info` と基準点 `boardCenter` / `comboText` / `backButton` を追加(仮仕様)
+- `TitleScene`: 「タップしてはじめる」を表示し、タップでバトル画面へ移る
+- `sceneKeys.ts`: `battle` を追加
+- `CLAUDE.md`: 技術に GSAP を追加、現在のフェーズを Phase 3b に更新
+- `docs/GAME_DESIGN.md`・`README.md`: 操作・表示と再生・`?seed` を追記
+
 ## [Unreleased] — Phase 3a: パズルロジック
 
 ### 追加
