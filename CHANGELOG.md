@@ -6,6 +6,13 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — 修正: バトル画面から「タイトルへ」で暗転したまま止まる
+
+### 修正
+
+- `BattleView`: 破棄のときに、揺れの対象(シーンの root)の位置を戻そうとして例外になり、シーンの切り替えが暗転したまま止まっていた。破棄のときは揺れの対象に触らず、`stop()` でも破棄済みなら触らないようにした
+- テスト: `tests/presentation/views/battle/BattleView.test.ts`(root ごとの破棄・再生中の破棄で例外にならないこと)
+
 ## [Unreleased] — Phase 4b: バトル表示と systems/session
 
 ### 追加
