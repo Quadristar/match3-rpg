@@ -43,6 +43,10 @@ export interface SceneManagerOptions<K extends string, L extends Layout, M exten
   readonly getLayout: () => L;
   /** シーンに渡す共通の情報(changeScene と input 以外) */
   readonly context: Omit<SceneContext<K, M, D>, 'changeScene' | 'input'>;
-  /** シーンの enter やアセットの読み込みで回復できない失敗が起きたときの処理 */
+  /**
+   * シーンの生成・読み込み・enter・exit・破棄で失敗したときの処理(画面への表示など)。
+   * 生成・読み込み・enter で失敗した場合は、切り替えを打ち切り、暗転用の幕と入力の一時停止を
+   * 解除してから呼ぶ。exit・破棄で失敗した場合は、呼んだ後も切り替えを続ける
+   */
   readonly onError: (error: unknown) => void;
 }

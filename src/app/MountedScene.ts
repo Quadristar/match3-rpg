@@ -20,6 +20,8 @@ export interface MountTarget {
 export class MountedScene<K extends string, L extends Layout, M extends AssetManifest> {
   /** 最後に resize() に渡したレイアウト(同じレイアウトで二重に呼ばないため) */
   layout: L | null = null;
+  /** enter が完了したか(読み込みや enter が失敗したシーンには update・resize を呼ばない) */
+  entered = false;
 
   private constructor(
     readonly key: K,
@@ -50,16 +52,24 @@ export class MountedScene<K extends string, L extends Layout, M extends AssetMan
     return new MountedScene(key, scene, inputScope);
   }
 
-  /** exit を呼び、入力の登録を解除し、表示物を子要素ごと破棄する(exit が失敗しても必ず行う) */
+  /**
+   * exit を呼び、入力の登録を解除し、表示物を子要素ごと破棄する。
+   * 各段階は個別に行い、どこかで例外が起きても残りの段階を必ず行う(例外は onError に渡す)。
+   * 例外を外に出すと、切り替えが途中で止まり、暗転したままになるため。
+   */
   dispose(onError: (error: unknown) => void): void {
-    try {
-      this.scene.exit();
-    } catch (error) {
-      onError(error);
-    } finally {
-      this.inputScope.dispose();
-      this.scene.root.destroy({ children: true });
-      this.scene.background?.destroy({ children: true });
+    const steps = [
+      () => this.scene.exit(),
+      () => this.inputScope.dispose(),
+      () => this.scene.root.destroy({ children: true }),
+      () => this.scene.background?.destroy({ children: true }),
+    ];
+    for (const step of steps) {
+      try {
+        step();
+      } catch (error) {
+        onError(error);
+      }
     }
   }
 }

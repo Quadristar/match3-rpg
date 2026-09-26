@@ -6,6 +6,26 @@
 
 形式: 新しい変更を上に追記する。区分は「追加」「変更」「修正」「削除」。
 
+## [Unreleased] — SceneManager: 失敗時に暗転を解除し、エラーを画面に表示する
+
+### 追加
+
+- `src/app/ErrorPanel.ts`: 起動後のエラーを画面の下部に重ねて表示する(「再読み込み」「閉じる」。仮仕様)
+- `src/app/errorReport.ts`: 表示する文面(`?debug` のときは名前・メッセージ・スタック・件数・UA、ないときは短い案内だけ)とテスト
+- `src/app/globalErrorHandlers.ts`: window の `error`・`unhandledrejection` を受け取って表示する仕組みとテスト
+- `docs/template-backport.md`: 雛形への還元候補の一覧
+- `CLAUDE.md` §7: 画面の切り替えを伴う変更では、ヘッドレスブラウザで行き来(タイトル ⇄ バトル)を必ず確認するルール
+
+### 変更
+
+- `SceneManager`(共通基盤): シーンの生成・読み込み・enter・配置で失敗したら、切り替えを打ち切り、読み込み中表示と暗転用の幕を外し、入力の一時停止を解除してからエラーを通知する。保留中の切り替え要求は捨てる(仮仕様)。enter が完了していないシーンには update・resize を呼ばない
+- `Game`(共通基盤): シーンのエラーで ticker を止めて画面を差し替えるのをやめ、ErrorPanel で表示する。`gameConfig` に `errors.stackLines` を追加。`index.html` に `.error-panel` の CSS を追加
+
+### 修正
+
+- `MountedScene.dispose`(共通基盤): 入力の解除・表示物の破棄で例外が起きると、切り替えの外へ抜けて暗転したまま止まっていた。各段階を個別に行い、例外は通知して残りの段階を続ける
+- テスト: `tests/app/SceneManager.test.ts`(「失敗したとき」)
+
 ## [Unreleased] — 修正: バトル画面から「タイトルへ」で暗転したまま止まる
 
 ### 修正
