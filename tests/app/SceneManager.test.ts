@@ -119,6 +119,12 @@ function setup(
   options: {
     enterResults?: Partial<Record<Key, Promise<void>>>;
     bundles?: Partial<Record<Key, readonly Bundle[]>>;
+    /** 生成で例外を投げるシーン */
+    throwOnCreate?: readonly Key[];
+    /** enter で(同期的に)例外を投げるシーン */
+    throwOnEnter?: readonly Key[];
+    /** resize で例外を投げるシーン */
+    throwOnResize?: readonly Key[];
   } = {},
 ) {
   const log: string[] = [];
@@ -139,8 +145,22 @@ function setup(
   const contexts: SceneContext<Key, Manifest>[] = [];
   const factory = (key: Key) => (context: SceneContext<Key, Manifest>) => {
     log.push(`${key}.create`);
+    if (options.throwOnCreate?.includes(key) === true) {
+      throw new Error(`${key} create failed`);
+    }
     contexts.push(context);
     const scene = new RecordingScene(key, log, options.enterResults?.[key], options.bundles?.[key] ?? []);
+    if (options.throwOnEnter?.includes(key) === true) {
+      scene.enter = () => {
+        log.push(`${key}.enter`);
+        throw new Error(`${key} enter failed`);
+      };
+    }
+    if (options.throwOnResize?.includes(key) === true) {
+      scene.resize = () => {
+        throw new Error(`${key} resize failed`);
+      };
+    }
     created[key] = scene;
     return scene;
   };
@@ -664,5 +684,140 @@ describe('SceneManager: 入力', () => {
     manager.start('a');
     manager.destroy();
     expect(input.isPaused).toBe(false);
+  });
+});
+
+describe('SceneManager: 失敗したとき', () => {
+  /** 暗転用の幕が外れ、入力が再開し、切り替え中でなくなっていることを確かめる */
+  function expectRecovered(context: ReturnType<typeof setup>): void {
+    expect(context.fadeOverlay.visible).toBe(false);
+    expect(context.fadeOverlay.alpha).toBe(0);
+    expect(context.input.isPaused).toBe(false);
+    expect(context.manager.isTransitioning).toBe(false);
+  }
+
+  it('生成で失敗したら、幕を外し入力を再開してから通知する', () => {
+    const context = setup({ throwOnCreate: ['b'] });
+    const { manager, onError, input, fadeOverlay } = context;
+    manager.start('a');
+    finishFade(manager);
+    onError.mockImplementation(() => {
+      // 通知の時点で、すでに解除されている
+      expect(fadeOverlay.visible).toBe(false);
+      expect(input.isPaused).toBe(false);
+    });
+    manager.change('b');
+    finishFade(manager);
+    expect(onError).toHaveBeenCalledTimes(1);
+    expectRecovered(context);
+    expect(manager.currentKey).toBeNull();
+  });
+
+  it('enter が同期的に例外を投げたら、幕を外し入力を再開して通知する', () => {
+    const context = setup({ throwOnEnter: ['a'] });
+    context.manager.start('a');
+    expect(context.onError).toHaveBeenCalledTimes(1);
+    expectRecovered(context);
+  });
+
+  it('enter の Promise が失敗したら、幕を外し入力を再開して通知する', async () => {
+    const context = setup({ enterResults: { a: Promise.reject(new Error('enter failed')) } });
+    context.manager.start('a');
+    await flushPromises();
+    expect(context.onError).toHaveBeenCalledTimes(1);
+    expectRecovered(context);
+  });
+
+  it('読み込みが失敗したら、読み込み中表示も隠し、幕を外し入力を再開して通知する', async () => {
+    const context = setup({ bundles: { a: ['bundleA'] } });
+    context.bundles.failNext = true;
+    context.manager.start('a');
+    context.manager.update(LOADING_DELAY_MS + 1); // 読み込み中表示を出す
+    await flushPromises();
+    expect(context.onError).toHaveBeenCalledTimes(1);
+    expect(context.loading.hide).toHaveBeenCalled();
+    expectRecovered(context);
+  });
+
+  it('enter 後の配置(resize)で失敗したら、幕を外し入力を再開して通知する', () => {
+    const context = setup({ throwOnResize: ['b'] });
+    context.manager.start('a');
+    finishFade(context.manager);
+    context.manager.change('b');
+    finishFade(context.manager);
+    expect(context.log).toContain('b.enter');
+    expect(context.onError).toHaveBeenCalledTimes(1);
+    expectRecovered(context);
+  });
+
+  it('exit と破棄で失敗しても、残りの破棄を行い、切り替えを続けて幕を外す', () => {
+    const context = setup();
+    const { manager, created, onError, sceneLayer, input } = context;
+    manager.start('a');
+    finishFade(manager);
+    const a = created.a;
+    if (a === undefined) throw new Error('a が生成されていない');
+    a.exit = () => {
+      throw new Error('exit failed');
+    };
+    const destroyRoot = a.root.destroy.bind(a.root);
+    a.root.destroy = (options) => {
+      destroyRoot(options);
+      throw new Error('destroy failed');
+    };
+    manager.change('b');
+    finishFade(manager);
+    finishFade(manager);
+    expect(onError).toHaveBeenCalledTimes(2);
+    expect(a.background.destroyed).toBe(true);
+    expect(a.child.destroyed).toBe(true);
+    expect(sceneLayer.children).toEqual([created.b?.root]);
+    expect(manager.currentKey).toBe('b');
+    expectRecovered(context);
+    // exit で失敗したシーンが登録した入力も解除されている
+    expect(input.isPaused).toBe(false);
+  });
+
+  it('失敗したシーンには update を呼ばず、その後の切り替えは通常どおり行える', () => {
+    const context = setup({ throwOnEnter: ['a'] });
+    const { manager, log } = context;
+    manager.start('a');
+    log.length = 0;
+    manager.update(16);
+    expect(log).not.toContain('a.update');
+    manager.change('b');
+    finishFade(manager);
+    finishFade(manager);
+    expect(manager.currentKey).toBe('b');
+    expect(log).toContain('a.exit');
+    expect(log).toContain('b.enter');
+    expectRecovered(context);
+  });
+
+  it('失敗したら保留中の要求を捨てる', async () => {
+    const context = setup({ bundles: { a: ['bundleA'] } });
+    const { manager, bundles } = context;
+    bundles.hold = true;
+    bundles.failNext = true;
+    manager.start('a');
+    manager.change('b'); // 読み込み中の要求は保留される
+    await flushPromises();
+    finishFade(manager);
+    finishFade(manager);
+    expect(context.created.b).toBeUndefined();
+    expectRecovered(context);
+  });
+
+  it('読み込み中に destroy された後の失敗は、状態を変えずに通知だけする', async () => {
+    const context = setup({ bundles: { a: ['bundleA'] } });
+    const { manager, bundles, onError, fadeOverlay } = context;
+    bundles.failNext = true;
+    manager.start('a');
+    manager.destroy();
+    fadeOverlay.alpha = 1;
+    fadeOverlay.visible = true;
+    await flushPromises();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(fadeOverlay.visible).toBe(true);
   });
 });

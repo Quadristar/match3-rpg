@@ -1,6 +1,7 @@
 /**
  * Game: 起動処理と各層の接続。
  *
+ * - エラーを画面に表示する仕組みを用意する(シーンの切り替えでの失敗と、window の error・unhandledrejection)
  * - セーブと設定を読み込む(品質プリセットから描画解像度を決めるため、最初に行う)
  * - Pixi Application を WebGL 固定で生成する
  * - AssetManager を作り、boot バンドルを読み込む(失敗したら起動エラー)
@@ -36,10 +37,11 @@ import { renderResolution } from '../services/settings/quality';
 import { createAssetManager } from './createAssetManager';
 import { createPersistence } from './createPersistence';
 import { disablePixiEvents } from './disablePixiEvents';
+import { ErrorPanel } from './ErrorPanel';
 import { GAME_CONFIG } from './gameConfig';
+import { installGlobalErrorHandlers } from './globalErrorHandlers';
 import { RENDER_CONFIG } from './renderConfig';
 import { SceneManager } from './SceneManager';
-import { showBootError } from './showBootError';
 
 /** ゲームごとに渡す内容 */
 export interface GameOptions<K extends string, R extends string, A extends string, M extends AssetManifest, D> {
@@ -70,6 +72,14 @@ export class Game<K extends string, R extends string, A extends string, M extend
     options: GameOptions<K, R, A, M, D>,
   ): Promise<Game<K, R, A, M, D>> {
     const debug = parseDebugOptions(window.location.search);
+    // エラーの表示: ?debug のときは詳しく、ないときは短い案内だけ
+    const errorPanel = new ErrorPanel(root, {
+      detailed: debug.enabled,
+      stackLines: GAME_CONFIG.errors.stackLines,
+      userAgent: navigator.userAgent,
+    });
+    const reportError = (error: unknown): void => errorPanel.show(error);
+    installGlobalErrorHandlers(window, reportError);
     const { save, settings } = createPersistence(debug);
     const gameSave = save.open(options.save);
     const resolutionFor = (): number =>
@@ -195,10 +205,8 @@ export class Game<K extends string, R extends string, A extends string, M extend
         save: gameSave,
         settings,
       },
-      onError: (error) => {
-        app.ticker.stop();
-        showBootError(root, error);
-      },
+      // 暗転用の幕と入力の一時停止は SceneManager が解除する。ticker は止めない(画面を操作できるようにする)
+      onError: reportError,
     });
 
     layout.onChange((current) => {

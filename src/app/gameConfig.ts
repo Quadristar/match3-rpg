@@ -54,4 +54,8 @@ export const GAME_CONFIG = {
     /** デバッグ表示の更新間隔(ミリ秒)。毎フレームは更新しない */
     updateIntervalMs: 250,
   },
+  errors: {
+    /** ?debug のエラー表示で出すスタックの行数の上限(仮仕様) */
+    stackLines: 12,
+  },
 } as const;

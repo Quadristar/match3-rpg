@@ -16,6 +16,14 @@
  * 画面の回転などで resize() が呼ばれたら、進行中のフェードを即座に完了させてから
  * シーンの resize を呼ぶ。読み込み中・enter の完了待ちの場合は、完了時にフェードを省略する。
  * 切り替え中(idle 以外)は入力を一時停止する。
+ *
+ * 失敗したとき(仮仕様):
+ * - 生成・読み込み・enter・配置(resize)で失敗したら、切り替えを打ち切る。暗転用の幕を外し、
+ *   入力の一時停止を解除してから onError に渡す(暗転したまま操作できなくなるのを防ぐ)。
+ *   保留中の要求は捨てる。失敗したシーンは表示したままにするが、enter が完了していないため
+ *   update・resize は呼ばない。その後の changeScene による切り替えは通常どおり行える
+ * - 旧シーンの exit・破棄で失敗したら onError に渡し、切り替えはそのまま続ける
+ *   (新しいシーンのフェードインで幕が外れ、入力も再開する)
  */
 import type { SceneContext } from '../presentation/scenes/Scene';
 import type { AssetManifest, BundleName } from '../services/assets/assetTypes';
@@ -68,7 +76,7 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
       throw new Error('SceneManager.start は最初の1回だけ呼べます');
     }
     this.target = key;
-    this.swap();
+    this.guard(() => this.swap());
   }
 
   /** シーンを切り替える。扱いはファイル先頭のコメントを参照 */
@@ -96,7 +104,7 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
 
   /** 毎フレーム呼ぶ。現在のシーンの update とフェード・読み込み中表示を進める */
   update(deltaMs: number): void {
-    if (this.active !== null && (this.phase === 'idle' || this.phase === 'fadeOut' || this.phase === 'fadeIn')) {
+    if (this.active?.entered === true && (this.phase === 'idle' || this.phase === 'fadeOut' || this.phase === 'fadeIn')) {
       this.active.scene.update(deltaMs);
     }
     if (this.phase === 'fadeOut') {
@@ -104,7 +112,7 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
       const t = this.progress();
       this.setOverlay(t);
       if (t >= 1) {
-        this.swap();
+        this.guard(() => this.swap());
       }
     } else if (this.phase === 'loading') {
       this.loading.update(deltaMs);
@@ -141,7 +149,7 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
   /** 進行中のフェードを即座に完了させる */
   private completeTransition(): void {
     if (this.phase === 'fadeOut') {
-      this.swap();
+      this.guard(() => this.swap());
     }
     if (this.phase === 'loading' || this.phase === 'entering') {
       // 完了を待っている間は完了させられないため、完了時にフェードインを省略する
@@ -165,13 +173,8 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
     this.setPhase('loading');
     this.elapsedMs = 0;
 
-    let mounted: MountedScene<K, L, M>;
-    try {
-      mounted = MountedScene.mount(key, this.options.scenes[key], this.context, this.options);
-    } catch (error) {
-      this.options.onError(error);
-      return;
-    }
+    // 生成で失敗した場合は、呼び出し元の guard が fail する
+    const mounted = MountedScene.mount(key, this.options.scenes[key], this.context, this.options);
     this.active = mounted;
     const scene = mounted.scene;
 
@@ -187,11 +190,11 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
     ).then(
       () => {
         this.releasePending();
-        this.beginEnter(scene);
+        this.guard(() => this.beginEnter(scene));
       },
       (error: unknown) => {
         this.releasePending();
-        this.options.onError(error);
+        this.failIfCurrent(scene, 'loading', error);
       },
     );
   }
@@ -209,13 +212,14 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
     try {
       entered = scene.enter();
     } catch (error) {
-      this.options.onError(error);
+      this.fail(error);
       return;
     }
     if (entered instanceof Promise) {
+      // 完了後の配置で失敗した場合も fail する
       entered.then(
-        () => this.afterEnter(scene),
-        (error: unknown) => this.options.onError(error),
+        () => this.guard(() => this.afterEnter(scene)),
+        (error: unknown) => this.failIfCurrent(scene, 'entering', error),
       );
     } else {
       this.afterEnter(scene);
@@ -224,9 +228,11 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
 
   /** enter の完了後: 配置してフェードインを始める */
   private afterEnter(scene: MountedScene<K, L, M>['scene']): void {
-    if (this.active?.scene !== scene || this.phase !== 'entering') {
+    const active = this.active;
+    if (active?.scene !== scene || this.phase !== 'entering') {
       return;
     }
+    active.entered = true;
     this.setPhase('fadeIn');
     this.elapsedMs = 0;
     this.resizeActive(this.options.getLayout());
@@ -250,7 +256,7 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
 
   private resizeActive(layout: L): void {
     const active = this.active;
-    if (active === null || this.phase === 'loading' || this.phase === 'entering' || active.layout === layout) {
+    if (active === null || !active.entered || active.layout === layout) {
       return;
     }
     active.layout = layout;
@@ -266,6 +272,42 @@ export class SceneManager<K extends string, L extends Layout = Layout, M extends
     this.active = null;
     this.pendingRelease.push(...active.bundles);
     active.dispose(this.options.onError);
+  }
+
+  /** 切り替えの処理を行い、例外が起きたら fail する */
+  private guard(action: () => void): void {
+    try {
+      action();
+    } catch (error) {
+      this.fail(error);
+    }
+  }
+
+  /**
+   * 非同期の読み込み・enter の失敗: そのシーンの切り替えが続いていれば fail する。
+   * 待っている間に破棄された場合は、状態を変えずに通知だけする
+   */
+  private failIfCurrent(scene: MountedScene<K, L, M>['scene'], phase: Phase, error: unknown): void {
+    if (this.active?.scene === scene && this.phase === phase) {
+      this.fail(error);
+    } else {
+      this.options.onError(error);
+    }
+  }
+
+  /**
+   * 切り替えを打ち切る: 読み込み中表示と暗転用の幕を外し、入力の一時停止を解除してから通知する。
+   * 保留中の要求は捨てる(仮仕様)
+   */
+  private fail(error: unknown): void {
+    this.loading.finish();
+    this.target = null;
+    this.queued = null;
+    this.skipFadeIn = false;
+    this.elapsedMs = 0;
+    this.setOverlay(0);
+    this.setPhase('idle');
+    this.options.onError(error);
   }
 
   /** 段階を変え、切り替え中は入力を一時停止する */
